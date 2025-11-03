@@ -1,3 +1,6 @@
+# python
+from textnode import TextNode, TextType
+
 class HTMLNode:
     def __init__(self, tag=None, value=None, children=None, props=None):
         self.tag = tag
@@ -26,3 +29,38 @@ class LeafNode(HTMLNode):
         if self.tag is None:
             return str(self.value)
         return f"<{self.tag}{self.props_to_html()}>{self.value}</{self.tag}>"
+    
+
+class ParentNode(HTMLNode):
+    def __init__(self, tag, children, props=None):
+        # no children allowed; tag and value required (tag may be None)
+        super().__init__(tag=tag, value=None, children=children, props=props)
+
+    def to_html(self):
+        if self.tag is None:
+            raise ValueError("ParentNode must have a tag")
+        if self.children is None:
+            raise ValueError("ParentNode must have children")
+        inner = ""
+        for child in self.children:
+            inner = inner + child.to_html();
+        return f"<{self.tag}{self.props_to_html()}>{inner}</{self.tag}>"
+
+# python
+def text_node_to_html_node(text_node):
+    t = text_node.text_type
+    match t:
+        case TextType.TEXT:
+            return LeafNode(None, text_node.text)
+        case TextType.BOLD:
+            return LeafNode("b", text_node.text)
+        case TextType.ITALIC:
+            return LeafNode("i", text_node.text)
+        case TextType.CODE:
+            return LeafNode("code", text_node.text)
+        case TextType.LINK:
+            return LeafNode("a", text_node.text, {"href": text_node.url})
+        case TextType.IMAGE:
+            return LeafNode("img", "", {"src": text_node.url, "alt": text_node.text})
+        case _:
+            raise Exception("unsupported TextType")
