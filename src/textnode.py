@@ -100,3 +100,12 @@ def split_nodes_links(old_nodes):
             new_nodes.append(TextNode(alt, TextType.LINK, url))
             remaining = after
     return new_nodes
+
+def text_to_textnodes(text):
+    start_list = [TextNode(text, TextType.TEXT)]
+    split_image = split_nodes_image(start_list)
+    split_links = split_nodes_links(split_image)
+    split_code = split_nodes_delimiter(split_links, "`", TextType.CODE)
+    split_bold = split_nodes_delimiter(split_code, "**", TextType.BOLD)
+    split_line = split_nodes_delimiter(split_bold, "_", TextType.ITALIC)
+    return split_line

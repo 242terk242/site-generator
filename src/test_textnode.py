@@ -1,6 +1,6 @@
 import unittest
 
-from textnode import TextNode, TextType, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_links
+from textnode import TextNode, TextType, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_links, text_to_textnodes
 
 
 class TestTextNode(unittest.TestCase):
@@ -108,6 +108,59 @@ class TestTextNode(unittest.TestCase):
             ],
             new_nodes,
         )
+    
+    def test_plain_text(self):
+        nodes = text_to_textnodes("hello world")
+        assert len(nodes) == 1
+        assert nodes[0].text == "hello world"
+        assert nodes[0].text_type == TextType.TEXT
+
+    def test_bold_simple(self):
+        nodes = text_to_textnodes("a **b** c")
+        assert [n.text_type for n in nodes] == [TextType.TEXT, TextType.BOLD, TextType.TEXT]
+        assert [n.text for n in nodes] == ["a ", "b", " c"]
+    
+    def test_italic_simple(self):
+        nodes = text_to_textnodes("a _b_ c")
+        assert [n.text_type for n in nodes] == [TextType.TEXT, TextType.ITALIC, TextType.TEXT]
+    
+    def test_code_simple(self):
+        nodes = text_to_textnodes("x `y` z")
+        assert [n.text_type for n in nodes] == [TextType.TEXT, TextType.CODE, TextType.TEXT]
+
+    def test_link_simple(self):
+        nodes = text_to_textnodes("see [boot](https://boot.dev)")
+        assert len(nodes) == 2
+        assert nodes[1].text_type == TextType.LINK
+        assert nodes[1].text == "boot"
+        assert nodes[1].url == "https://boot.dev"
+
+    def test_image_simple(self):
+        nodes = text_to_textnodes("pic ![alt](http://x)")
+        assert nodes[-1].text_type == TextType.IMAGE
+        assert nodes[-1].text == "alt"
+        assert nodes[-1].url == "http://x"
+
+    def test_mixed_inline(self):
+        s = "This is **text** with an _italic_ and a `code` and a [link](u)"
+        nodes = text_to_textnodes(s)
+        types = [n.text_type for n in nodes]
+        assert TextType.BOLD in types
+        assert TextType.ITALIC in types
+        assert TextType.CODE in types
+        assert any(n.text_type == TextType.LINK and n.url == "u" for n in nodes)
+
+    def test_no_emphasis_inside_code(self):
+        nodes = text_to_textnodes("`**_x_**`")
+        assert len(nodes) == 1
+        assert nodes[0].text_type == TextType.CODE
+        assert nodes[0].text == "**_x_**"
+
+    def test_multiple_links_images(self):
+        s = "[a](u1) and ![b](u2)"
+        nodes = text_to_textnodes(s)
+        assert any(n.text_type == TextType.LINK and n.text == "a" and n.url == "u1" for n in nodes)
+        assert any(n.text_type == TextType.IMAGE and n.text == "b" and n.url == "u2" for n in nodes)
 
 if __name__ == "__main__":
     unittest.main()
