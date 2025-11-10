@@ -1,4 +1,6 @@
 from enum import Enum
+from src.htmlnode import ParentNode, text_node_to_html_node
+from textnode import TextNode, TextType, text_to_textnodes
 
 class BlockType(Enum):
     PARAGRAPH = "paragraph"
@@ -62,3 +64,109 @@ def block_to_block_type(block):
         return BlockType.ORDERED_LIST
 
     return BlockType.PARAGRAPH
+
+def markdown_to_html_node(markdown):
+    children = []
+    blocks_result = markdown_to_blocks(markdown)
+    for block in blocks_result:
+        block_type = block_to_block_type(block)
+        match block_type:
+            case BlockType.CODE:
+                # Slice off ```\n at start and ``` at end
+                code_content = block[4:-3]
+                
+                # Create a text node with the content (no special formatting)
+                text_node = TextNode(code_content, TextType.TEXT)
+                html_node = text_node_to_html_node(text_node)
+
+                # Wrap in <code>, then <pre>
+                code_node = ParentNode('code', [html_node])  # Note the list!
+                pre_node = ParentNode('pre', [code_node])    # Note the list!
+
+                children.append(pre_node)
+            case BlockType.HEADING:
+                heading_count = len(block)-len(block.lstrip('#'))
+                heading_content = block[heading_count:].strip()
+                
+                  # Parse inline markdown (like paragraphs!)
+                node_result = text_to_textnodes(heading_content)
+                html_nodes = []
+                for text_node in node_result:
+                    html_node = text_node_to_html_node(text_node)
+                    html_nodes.append(html_node)
+
+                heading_node = ParentNode(f"h{heading_count}", html_nodes) 
+                children.append(heading_node)
+            case BlockType.QUOTE:
+                # Split into lines, strip '> ' from each, then rejoin
+                lines = block.split('\n')
+                quote_lines = [line.lstrip('> ').strip() for line in lines]
+                quote_content = ' '.join(quote_lines)
+    
+                # Parse inline markdown
+                node_result = text_to_textnodes(quote_content)
+                html_nodes = []
+                for text_node in node_result:
+                    html_node = text_node_to_html_node(text_node)
+                    html_nodes.append(html_node)
+    
+                quote_node = ParentNode("blockquote", html_nodes)
+                children.append(quote_node)
+            case BlockType.UNORDERED_LIST:
+                # Split into individual lines (each is a list item)
+                lines = block.split('\n')
+    
+                list_items = []
+                for line in lines:
+                # Strip the '* ' or '- ' from the beginning
+                    item_text = line.lstrip('*- ').strip()
+        
+                # Parse inline markdown for this item
+                    node_result = text_to_textnodes(item_text)
+                    html_nodes = []
+                    for text_node in node_result:
+                        html_node = text_node_to_html_node(text_node)
+                        html_nodes.append(html_node)
+        
+                    # Create <li> node for this item
+                    li_node = ParentNode("li", html_nodes)
+                    list_items.append(li_node)
+    
+                # Wrap all <li> nodes in <ul>
+                ul_node = ParentNode("ul", list_items)
+                children.append(ul_node)
+            case BlockType.ORDERED_LIST:
+                 # Split into individual lines (each is a list item)
+                lines = block.split('\n')
+    
+                list_items = []
+                for line in lines:
+                    item_text = line.lstrip('0123456789. ').strip()
+        
+                # Parse inline markdown for this item
+                    node_result = text_to_textnodes(item_text)
+                    html_nodes = []
+                    for text_node in node_result:
+                        html_node = text_node_to_html_node(text_node)
+                        html_nodes.append(html_node)
+        
+                    # Create <li> node for this item
+                    li_node = ParentNode("li", html_nodes)
+                    list_items.append(li_node)
+
+                ul_node = ParentNode("ol", list_items)
+                children.append(ul_node)
+            case BlockType.PARAGRAPH:
+                # Replace newlines with spaces within the paragraph
+                paragraph_text = block.replace('\n', ' ')
+    
+                node_result = text_to_textnodes(paragraph_text)
+                html_nodes = []
+                for text_node in node_result:
+                    html_node = text_node_to_html_node(text_node)
+                    html_nodes.append(html_node)
+                children.append(ParentNode('p', html_nodes))
+    return ParentNode('div', children)
+
+
+
