@@ -1,10 +1,48 @@
-from textnode import TextType, TextNode 
+import shutil,os
+from markdown_blocks import markdown_to_html_node
 
-print('hello world')
+path_public = './public'
+path_static = './static'
 
+def copy_recursive(src, dst):
+    contents = os.listdir(src)
+    for content in contents:
+        if os.path.isfile(src + "/" + content):
+            shutil.copy(src + "/" + content, dst)
+        else:
+            os.makedirs(dst + "/" + content, exist_ok=True)
+            copy_recursive(src + "/" + content, dst + "/" + content)
+
+def extract_title(markdown):
+    split_result = markdown.split("\n\n")
+    heading_count = len(split_result[0])-len(split_result[0].lstrip('#'))
+    heading_content = ""
+    if heading_count == 0:
+        raise Exception("No header in markdown")
+    else:
+        heading_content = markdown[heading_count:].strip()
+    return heading_content
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    markdown_result = ""
+    template_result = ""
+    with open(from_path) as f:
+        markdown_result = f.read()
+    with open(template_path) as f:
+        template_result = f.read()
+    markdown_html = markdown_to_html_node(markdown_result).to_html()
+    title = extract_title(markdown_result)
+    uodate_title = template_result.replace("{{ Title }}", title)
+    uodate_html = uodate_title.replace("{{ Content }}", markdown_html)
+    with open(dest_path, "w") as file:
+        file.write(uodate_html)
 
 def main():
-    print(TextNode('This is some anchor text', 'link', 'https://www.boot.dev'))
-
+    if os.path.exists(path_public):
+        shutil.rmtree(path_public)
+    os.mkdir(path_public, mode=0o777, dir_fd=None)
+    copy_recursive(path_static, path_public)
+    generate_page('./content/index.md', './template.html', './public/index.html')
 
 main()

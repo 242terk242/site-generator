@@ -1,5 +1,5 @@
 from enum import Enum
-from src.htmlnode import ParentNode, text_node_to_html_node
+from htmlnode import ParentNode, text_node_to_html_node
 from textnode import TextNode, TextType, text_to_textnodes
 
 class BlockType(Enum):
