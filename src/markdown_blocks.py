@@ -13,17 +13,44 @@ class BlockType(Enum):
 
 
 def markdown_to_blocks(markdown):
-    split_result = markdown.split("\n\n")
-    for i in range(0, len(split_result)):
-        split_result[i] = split_result[i].strip()
-    filtered_list = [s for s in split_result if s.strip()]
-    return filtered_list
+    lines = markdown.splitlines()
+    blocks = []
+    cur = []
+    in_code = False
+    for line in lines:
+        if line.strip() == "```":
+            if not in_code:
+                # starting a fence: flush current block, start code block
+                if cur:
+                    blocks.append("\n".join(cur).strip())
+                    cur = []
+                cur = ["```"]
+                in_code = True
+            else:
+                # closing fence: finish code block
+                cur.append("```")
+                blocks.append("\n".join(cur).strip())
+                cur = []
+                in_code = False
+            continue
+        if in_code:
+            cur.append(line)
+            continue
+        if line.strip() == "":
+            if cur:
+                blocks.append("\n".join(cur).strip())
+                cur = []
+        else:
+            cur.append(line)
+    if cur:
+        blocks.append("\n".join(cur).strip())
+    return [b for b in blocks if b]
 
 def block_to_block_type(block):
     lines = block.split("\n")
 
     # code
-    if len(lines) >= 2 and lines[0] == "```" and lines[-1] == "```":
+    if len(lines) >= 2 and lines[0].strip() == "```" and lines[-1].strip() == "```":
         return BlockType.CODE
 
     # heading: only first line, 1–6 hashes followed by a space
@@ -69,20 +96,18 @@ def markdown_to_html_node(markdown):
     children = []
     blocks_result = markdown_to_blocks(markdown)
     for block in blocks_result:
-        block_type = block_to_block_type(block)
-        match block_type:
+        bt = block_to_block_type(block)
+        first = block.split("\n")[0] if block else ""
+        last = block.split("\n")[-1] if block else ""
+        print("BlockType:", bt, "| first:", repr(first), "| last:", repr(last))
+        match bt:
             case BlockType.CODE:
-                # Slice off ```\n at start and ``` at end
-                code_content = block[4:-3]
-                
-                # Create a text node with the content (no special formatting)
-                text_node = TextNode(code_content, TextType.TEXT)
-                html_node = text_node_to_html_node(text_node)
-
-                # Wrap in <code>, then <pre>
-                code_node = ParentNode('code', [html_node])  # Note the list!
-                pre_node = ParentNode('pre', [code_node])    # Note the list!
-
+                lines = block.split("\n")
+                # strip the first and last fence lines
+                inner = "\n".join(lines[1:-1])
+                text_node = TextNode(inner, TextType.TEXT)
+                code_node = ParentNode("code", [text_node_to_html_node(text_node)])
+                pre_node = ParentNode("pre", [code_node])
                 children.append(pre_node)
             case BlockType.HEADING:
                 heading_count = len(block)-len(block.lstrip('#'))
@@ -118,10 +143,8 @@ def markdown_to_html_node(markdown):
     
                 list_items = []
                 for line in lines:
-                # Strip the '* ' or '- ' from the beginning
                     item_text = line.lstrip('*- ').strip()
-        
-                # Parse inline markdown for this item
+                    print("UL item:", repr(item_text))  # add this
                     node_result = text_to_textnodes(item_text)
                     html_nodes = []
                     for text_node in node_result:
@@ -136,24 +159,19 @@ def markdown_to_html_node(markdown):
                 ul_node = ParentNode("ul", list_items)
                 children.append(ul_node)
             case BlockType.ORDERED_LIST:
-                 # Split into individual lines (each is a list item)
                 lines = block.split('\n')
-    
                 list_items = []
                 for line in lines:
-                    item_text = line.lstrip('0123456789. ').strip()
-        
-                # Parse inline markdown for this item
+                    dot = line.find(". ")
+                    item_text = line[dot+2:] if dot != -1 else line  # precise cut
+                    print("OL item:", repr(item_text))  # add this
                     node_result = text_to_textnodes(item_text)
                     html_nodes = []
                     for text_node in node_result:
                         html_node = text_node_to_html_node(text_node)
                         html_nodes.append(html_node)
-        
-                    # Create <li> node for this item
                     li_node = ParentNode("li", html_nodes)
                     list_items.append(li_node)
-
                 ul_node = ParentNode("ol", list_items)
                 children.append(ul_node)
             case BlockType.PARAGRAPH:

@@ -29,25 +29,28 @@ class TextNode():
         return f"TextNode({self.text}, {self.text_type}, {self.url})"
     
 def split_nodes_delimiter(old_nodes, delimiter, text_type):
-    node_list = []
+    new_nodes = []
     for node in old_nodes:
         if node.text_type != TextType.TEXT:
-            node_list.append(node)
-        else:
-            parts = node.text.split(delimiter)
-            if len(parts) % 2 == 0: 
-                raise Exception("invalid markdown syntax")
-            if len(parts) == 1:
-                node_list.append(node)
-            else: 
-                for i, part in enumerate(parts):
-                    if part == "": 
-                        continue
-                    if i % 2 == 0: 
-                        node_list.append(TextNode(part,TextType.TEXT))
-                    else: 
-                        node_list.append(TextNode(part, text_type))
-    return node_list
+            new_nodes.append(node)
+            continue
+        text = node.text
+        if delimiter not in text:
+            new_nodes.append(node)
+            continue
+        parts = text.split(delimiter)
+        # unmatched delimiter → fall back to plain text
+        if len(parts) % 2 == 0:
+            new_nodes.append(TextNode(text, TextType.TEXT))
+            continue
+        for i, part in enumerate(parts):
+            if i % 2 == 0:
+                if part:
+                    new_nodes.append(TextNode(part, TextType.TEXT))
+            else:
+                if part:
+                    new_nodes.append(TextNode(part, text_type))
+    return new_nodes
 
 def extract_markdown_images(text):
     return re.findall(r"!\[([^\[\]]*)\]\(([^\(\)]*)\)", text)

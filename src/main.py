@@ -20,7 +20,7 @@ def extract_title(markdown):
     if heading_count == 0:
         raise Exception("No header in markdown")
     else:
-        heading_content = markdown[heading_count:].strip()
+        heading_content = split_result[0][heading_count:].strip()
     return heading_content
 
 def generate_page(from_path, template_path, dest_path):
@@ -31,6 +31,7 @@ def generate_page(from_path, template_path, dest_path):
         markdown_result = f.read()
     with open(template_path) as f:
         template_result = f.read()
+    print("Parsing:", from_path)
     markdown_html = markdown_to_html_node(markdown_result).to_html()
     title = extract_title(markdown_result)
     uodate_title = template_result.replace("{{ Title }}", title)
@@ -43,6 +44,19 @@ def main():
         shutil.rmtree(path_public)
     os.mkdir(path_public, mode=0o777, dir_fd=None)
     copy_recursive(path_static, path_public)
-    generate_page('./content/index.md', './template.html', './public/index.html')
+    for dirpath, dirnames, filenames in os.walk("./content"):
+        for name in filenames:
+            if not name.endswith(".md"):
+                continue
+            src_md = os.path.join(dirpath, name)             # full source file
+            rel = os.path.relpath(src_md, "content")         # e.g., blog/glorfindel/index.md
+            out_dir = os.path.join("public", os.path.dirname(rel))  # public/blog/glorfindel
+            os.makedirs(out_dir, exist_ok=True)
+            base = os.path.basename(src_md)
+            if base == "index.md":
+                out_html = os.path.join(out_dir, "index.html")
+            else:
+                out_html = os.path.join(out_dir, os.path.splitext(base)[0] + ".html")
+            generate_page(src_md, "./template.html", out_html)
 
 main()
