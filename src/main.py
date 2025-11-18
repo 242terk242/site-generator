@@ -44,6 +44,7 @@ def generate_page(from_path, template_path, dest_path, basepath="/"):
 
 def main():
 
+    basepath = "/"
     if sys.argv[1:]:
         print(f"{sys.argv}")
         basepath = sys.argv[1]
