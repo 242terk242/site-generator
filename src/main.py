@@ -35,9 +35,9 @@ def generate_page(from_path, template_path, dest_path, basepath="/"):
     print("Parsing:", from_path)
     markdown_html = markdown_to_html_node(markdown_result).to_html()
     title = extract_title(markdown_result)
-    uodate_title = template_result.replace("{{ Title }}", title)
-    uodate_html = uodate_title.replace("{{ Content }}", markdown_html)
-    update_href = uodate_html.replace('href="/', f'href="{basepath}')
+    update_title = template_result.replace("{{ Title }}", title)
+    update_html = update_title.replace("{{ Content }}", markdown_html)
+    update_href = update_html.replace('href="/', f'href="{basepath}')
     update_src = update_href.replace('src="/', f'src="{basepath}')
     with open(dest_path, "w") as file:
         file.write(update_src)
