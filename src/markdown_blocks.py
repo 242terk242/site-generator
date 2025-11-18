@@ -97,8 +97,6 @@ def markdown_to_html_node(markdown):
     blocks_result = markdown_to_blocks(markdown)
     for block in blocks_result:
         bt = block_to_block_type(block)
-        first = block.split("\n")[0] if block else ""
-        last = block.split("\n")[-1] if block else ""
         match bt:
             case BlockType.CODE:
                 lines = block.split("\n")
