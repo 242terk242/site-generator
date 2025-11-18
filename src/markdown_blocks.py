@@ -99,7 +99,6 @@ def markdown_to_html_node(markdown):
         bt = block_to_block_type(block)
         first = block.split("\n")[0] if block else ""
         last = block.split("\n")[-1] if block else ""
-        print("BlockType:", bt, "| first:", repr(first), "| last:", repr(last))
         match bt:
             case BlockType.CODE:
                 lines = block.split("\n")
@@ -144,7 +143,6 @@ def markdown_to_html_node(markdown):
                 list_items = []
                 for line in lines:
                     item_text = line.lstrip('*- ').strip()
-                    print("UL item:", repr(item_text))  # add this
                     node_result = text_to_textnodes(item_text)
                     html_nodes = []
                     for text_node in node_result:
@@ -164,7 +162,6 @@ def markdown_to_html_node(markdown):
                 for line in lines:
                     dot = line.find(". ")
                     item_text = line[dot+2:] if dot != -1 else line  # precise cut
-                    print("OL item:", repr(item_text))  # add this
                     node_result = text_to_textnodes(item_text)
                     html_nodes = []
                     for text_node in node_result:
